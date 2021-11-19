@@ -3,7 +3,9 @@ from tensorflow_probability import distributions as tfd
 import tensorflow_probability as tfp
 from tensorflow.keras import initializers
 
-
+"""
+    function adapted from https://github.com/stefan1893/TM-VI
+"""
 class VimltsLinearNull(tf.keras.layers.Layer):
     def __init__(self,
                  units: int,

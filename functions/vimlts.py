@@ -2,7 +2,9 @@ import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 import tensorflow_probability as tfp
 from tensorflow.keras import initializers
-
+"""
+    function adapted from https://github.com/stefan1893/TM-VI
+"""
 
 class VimltsLinear(tf.keras.layers.Layer):
     def __init__(self,
@@ -580,6 +582,7 @@ class VimltsLinearFroz(tf.keras.layers.Layer):
 class DenseViGauss(tf.keras.layers.Layer):
     def __init__(self,
                  units,
+                 size: int=10,
                  activation: tf.keras.activations = tf.keras.activations.linear,
                  num_samples: int = 10,
                  kernel_init_mu_w: initializers = initializers.Constant(0.),
@@ -587,6 +590,7 @@ class DenseViGauss(tf.keras.layers.Layer):
                  prior_dist: object = tfd.Normal(loc=0., scale=1.),
                  **kwargs):
         self.units_ = units
+        self.size_ = size
         self.activation_ = activation
         self.num_samples_ = num_samples
         self.kernel_init_mu_w_ = kernel_init_mu_w
@@ -622,7 +626,7 @@ class DenseViGauss(tf.keras.layers.Layer):
         else:
             log_p_w = self.prior_dist_.log_prob(wq)
             kl = tf.reduce_sum(tf.reduce_mean(log_q_w, (0))) - tf.reduce_sum(tf.reduce_mean(log_p_w, (0)))
-        self.add_loss(kl/21200)
+        self.add_loss(kl/self.size_)
         return out
 
     def get_w_dist(self, num=1000):

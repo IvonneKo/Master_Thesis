@@ -3,7 +3,9 @@ from tensorflow_probability import distributions as tfd
 import tensorflow_probability as tfp
 from tensorflow.keras import initializers
 
-
+"""
+    function adapted from https://github.com/stefan1893/TM-VI
+"""
         
 class VimltsLinearB(tf.keras.layers.Layer):
     def __init__(self,
@@ -276,110 +278,4 @@ class VimltsLinearB(tf.keras.layers.Layer):
         return out
 
     
-    
-    
-    
-    
-class DenseViGaussB(tf.keras.layers.Layer):
-    def __init__(self,
-                 units,
-                 activation: tf.keras.activations = tf.keras.activations.linear,
-                 num_samples: int = 10,
-                 kernel_init_mu_w: initializers = initializers.Constant(0.),
-                 kernel_init_rhosigma_w: initializers = initializers.Constant(0.5),
-                 biasCov: initializers = initializers.Constant(-4.25),
-                 prior_dist: object = tfd.Normal(loc=0., scale=1.),
-                 **kwargs):
-        self.units_ = units
-        self.activation_ = activation
-        self.num_samples_ = num_samples
-        self.kernel_init_mu_w_ = kernel_init_mu_w
-        self.kernel_init_rhosigma_w_ = kernel_init_rhosigma_w
-        if (biasCov is None):
-                #(bias_init_beta_z is None) or \
-                #(bias_init_alpha_z is None) or \
-                #(bias_init_beta_w is None) or \
-                #(bias_init_alpha_w is None):
-            self.use_bias = False
-        else:
-            self.use_bias = True
-            #self.b_alpha_w_ = bias_init_alpha_w
-            #self.b_beta_w_ = bias_init_beta_w
-            #self.b_alpha_z_ = bias_init_alpha_z
-            #self.b_beta_z_ = bias_init_beta_z
-            #self.b_thetas_ = bias_init_thetas
-            #self.b_beta_dist = self.init_beta_dist(len(bias_init_thetas))
-            self.b_biasCov_ = biasCov
-        self.prior_dist_ = prior_dist
-        super().__init__(**kwargs)
-
-    # def compute_output_shape(self, input_shape):
-    #     return (self.num_samples_, input_shape[0], -1)
-
-    def build(self, input_shape):
-        self.kernel_mu = self.add_weight(name='kernel_mu',
-                                         shape=(input_shape[1], self.units_),
-                                         initializer=self.kernel_init_mu_w_,
-                                         trainable=True)
-        self.kernel_rho = self.add_weight(name='kernel_rho',
-                                       shape=(input_shape[1], self.units_),
-                                       initializer=self.kernel_init_rhosigma_w_,
-                                       trainable=True)
-        
-        
-        if self.use_bias:
-            shape = (self.units_,)
-            #self.b_z_dist_ = tfd.TruncatedNormal(loc=tf.zeros(shape),
-                                        #scale=tf.ones(shape),low=-5,high=5)
-           # self.b_alpha_w = self.add_weight(name='b_alpha_w',
-                                             #shape=shape,
-                                             #initializer=self.b_alpha_w_,
-                                            # trainable=True)
-            #self.b_beta_w = self.add_weight(name='b_beta_w',
-                                          #  shape=shape,
-                                            #initializer=self.b_beta_w_,
-                                            #trainable=True)
-           # self.b_alpha_z = self.add_weight(name='b_alpha_z',
-                                             #shape=shape,
-                                             #initializer=self.b_alpha_z_,
-                                             #trainable=True)
-            #self.b_beta_z = self.add_weight(name='b_beta_z',
-                                            #shape=shape,
-                                            #initializer=self.b_beta_z_,
-                                           #trainable=True)
-            self.b_biasCov = self.add_weight(name='b_beta_z',
-                                            shape=shape,
-                                            initializer=self.b_biasCov_,
-                                            trainable=False)
-        
-        
-        
-        super().build(input_shape)
-
-    def call(self, inputs, **kwargs):
-        kernel_sigma = tf.math.softplus(self.kernel_rho)
-        q_dist = tfd.Normal(loc=self.kernel_mu, scale=kernel_sigma)
-        wq = q_dist.sample(self.num_samples_)
-        out = self.activation_(inputs @ wq + self.b_biasCov[:, None])
-
-        log_q_w = q_dist.log_prob(wq)
-        if isinstance(self.activation_, tfp.bijectors.Bijector):
-            log_p_out = self.prior_dist_.log_prob(out)
-            log_q_out = log_q_w + self.activation_.inverse_log_det_jacobian(out, event_ndims=0)
-            kl = tf.reduce_sum(tf.reduce_mean(log_q_out, (0, 1))) - tf.reduce_sum(tf.reduce_mean(log_p_out, (0, 1)))
-        else:
-            log_p_w = self.prior_dist_.log_prob(wq)
-            kl = tf.reduce_sum(tf.reduce_mean(log_q_w, (0))) - tf.reduce_sum(tf.reduce_mean(log_p_w, (0)))
-        self.add_loss(kl/21200)
-        return out
-
-    def get_w_dist(self, num=1000):
-        mu = self.kernel_mu
-        sigma = tf.math.softplus(self.kernel_rho)
-        print(f"VI Gaus with: N({mu},{sigma})")
-        dist = tfd.Normal(mu, sigma)
-        w_sample = tf.sort(tf.squeeze(dist.sample(num)))
-        q_w = dist.prob(w_sample)
-        return q_w.numpy().squeeze(), w_sample.numpy().squeeze()
-
 
