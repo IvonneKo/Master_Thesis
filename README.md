@@ -1,4 +1,4 @@
-# Prediction of melanoma type usingsemi-structured Bayesian deep learning models
+# Prediction of melanoma types using semi-structured Bayesian deep learning models
 ## Master Thesis 
 ###  Author: Ivonne Kovylov
 #### HTWG Konstanz, Institute for Optical Systems 
